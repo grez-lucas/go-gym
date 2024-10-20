@@ -8,8 +8,8 @@ import (
 )
 
 func WriteJSON(w http.ResponseWriter, status int, v any) error {
-	w.WriteHeader(status) // Write the status
 	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)               // Write the status
 	return json.NewEncoder(w).Encode(v) // To encode anything
 }
 
@@ -60,7 +60,7 @@ func (s *APIServer) Run() {
 func (s *APIServer) handleGyms(w http.ResponseWriter, req *http.Request) error {
 	// This is the entry function which differentiates between POST, GET and DELETE requests
 	if req.Method == "GET" {
-		return s.handleGetGyms(w, req)
+		return s.handleGetGym(w, req)
 	}
 
 	if req.Method == "POST" {
@@ -74,7 +74,8 @@ func (s *APIServer) handleGetGyms(w http.ResponseWriter, req *http.Request) erro
 }
 
 func (s *APIServer) handleGetGym(w http.ResponseWriter, req *http.Request) error {
-	return nil
+	gym := NewGym("Sportlife", "A gym for adding sport to your life")
+	return WriteJSON(w, http.StatusOK, gym)
 }
 
 func (s *APIServer) handleCreateGym(w http.ResponseWriter, req *http.Request) error {
