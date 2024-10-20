@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 )
@@ -47,7 +48,7 @@ func (s *APIServer) Run() {
 	//
 	// router.handler
 
-	http.HandleFunc("/gyms", makeHTTPHandleFunc(s.handleGetGyms))
+	http.HandleFunc("/gyms", makeHTTPHandleFunc(s.handleGyms))
 
 	log.Println("JSON API Running on port: ", s.listenAddr)
 	http.ListenAndServe(s.listenAddr, nil)
@@ -58,7 +59,14 @@ func (s *APIServer) Run() {
 // name convention is handleFooBar
 func (s *APIServer) handleGyms(w http.ResponseWriter, req *http.Request) error {
 	// This is the entry function which differentiates between POST, GET and DELETE requests
-	return nil
+	if req.Method == "GET" {
+		return s.handleGetGyms(w, req)
+	}
+
+	if req.Method == "POST" {
+		return s.handleCreateGym(w, req)
+	}
+	return fmt.Errorf("Method not allowed `%s` ", req.Method)
 }
 
 func (s *APIServer) handleGetGyms(w http.ResponseWriter, req *http.Request) error {
@@ -66,6 +74,10 @@ func (s *APIServer) handleGetGyms(w http.ResponseWriter, req *http.Request) erro
 }
 
 func (s *APIServer) handleGetGym(w http.ResponseWriter, req *http.Request) error {
+	return nil
+}
+
+func (s *APIServer) handleCreateGym(w http.ResponseWriter, req *http.Request) error {
 	return nil
 }
 
