@@ -44,14 +44,16 @@ func NewAPIServer(listenAddr string) *APIServer {
 // Function to start our server up
 func (s *APIServer) Run() {
 
-	// router := mux.NewRouter()
-	//
-	// router.handler
+	router := http.NewServeMux()
 
-	http.HandleFunc("/gyms", makeHTTPHandleFunc(s.handleGyms))
+	router.HandleFunc("/gyms", makeHTTPHandleFunc(s.handleGyms))
 
-	log.Println("JSON API Running on port: ", s.listenAddr)
-	http.ListenAndServe(s.listenAddr, nil)
+	server := http.Server{
+		Addr:    s.listenAddr,
+		Handler: router,
+	}
+	log.Println("Starting JSON API on port: ", s.listenAddr)
+	server.ListenAndServe()
 
 }
 
