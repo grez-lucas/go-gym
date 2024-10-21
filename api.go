@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 )
@@ -46,7 +45,11 @@ func (s *APIServer) Run() {
 
 	router := http.NewServeMux()
 
-	router.HandleFunc("/gyms", makeHTTPHandleFunc(s.handleGyms))
+	router.HandleFunc("GET /gyms", makeHTTPHandleFunc(s.handleGetGyms))
+	router.HandleFunc("GET /gyms/{id}", makeHTTPHandleFunc(s.handleGetGym))
+	router.HandleFunc("POST /gyms", makeHTTPHandleFunc(s.handleCreateGym))
+	router.HandleFunc("DELETE /gyms/{id}", makeHTTPHandleFunc(s.handleDeleteGym))
+	router.HandleFunc("POST /gyms/{id}/ratings", makeHTTPHandleFunc(s.handleRateGym))
 
 	server := http.Server{
 		Addr:    s.listenAddr,
@@ -59,23 +62,15 @@ func (s *APIServer) Run() {
 
 // Handlers: a handler handles a specific route
 // name convention is handleFooBar
-func (s *APIServer) handleGyms(w http.ResponseWriter, req *http.Request) error {
-	// This is the entry function which differentiates between POST, GET and DELETE requests
-	if req.Method == "GET" {
-		return s.handleGetGym(w, req)
-	}
-
-	if req.Method == "POST" {
-		return s.handleCreateGym(w, req)
-	}
-	return fmt.Errorf("Method not allowed `%s` ", req.Method)
-}
 
 func (s *APIServer) handleGetGyms(w http.ResponseWriter, req *http.Request) error {
+	log.Println("Received method to GET all gyms")
 	return nil
 }
 
 func (s *APIServer) handleGetGym(w http.ResponseWriter, req *http.Request) error {
+	id := req.PathValue("id")
+	log.Println("Received method to GET a gym with id:", id)
 	gym := NewGym("Sportlife", "A gym for adding sport to your life")
 	return WriteJSON(w, http.StatusOK, gym)
 }
@@ -85,9 +80,13 @@ func (s *APIServer) handleCreateGym(w http.ResponseWriter, req *http.Request) er
 }
 
 func (s *APIServer) handleRateGym(w http.ResponseWriter, req *http.Request) error {
+	id := req.PathValue("id")
+	log.Println("Received method to RATE gym with id:", id)
 	return nil
 }
 
 func (s *APIServer) handleDeleteGym(w http.ResponseWriter, req *http.Request) error {
+	id := req.PathValue("id")
+	log.Println("Received method to DELETE gym with id:", id)
 	return nil
 }
