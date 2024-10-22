@@ -23,9 +23,14 @@ type PostgreSQLStore struct {
 }
 
 func NewPostgreSQLStore() (*PostgreSQLStore, error) {
-	// connStr := "host=go_db user=postgres dbname=postgres password=mysecretpassword sslmode=disable"
+	connStr, found := os.LookupEnv("DATABASE_URL")
 
-	db, err := sql.Open("postgres", os.Getenv("DATABASE_URL"))
+	// For running locally
+	if !found {
+		connStr = "host=localhost user=postgres dbname=postgres password=gogym sslmode=disable"
+	}
+
+	db, err := sql.Open("postgres", connStr)
 
 	if err != nil {
 		return nil, err
