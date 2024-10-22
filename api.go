@@ -14,6 +14,8 @@ func WriteJSON(w http.ResponseWriter, status int, v any) error {
 
 type APIServer struct {
 	listenAddr string
+	// This way we can abstract the DB to anything that implements the Storage interface
+	store Storage
 }
 
 type APIFunc func(http.ResponseWriter, *http.Request) error
@@ -34,9 +36,10 @@ func makeHTTPHandleFunc(f APIFunc) http.HandlerFunc {
 	}
 }
 
-func NewAPIServer(listenAddr string) *APIServer {
+func NewAPIServer(listenAddr string, store Storage) *APIServer {
 	return &APIServer{
 		listenAddr: listenAddr,
+		store:      store,
 	}
 }
 
@@ -65,7 +68,14 @@ func (s *APIServer) Run() {
 
 func (s *APIServer) handleGetGyms(w http.ResponseWriter, req *http.Request) error {
 	log.Println("Received method to GET all gyms")
-	return nil
+
+	gyms, err := s.store.GetGyms()
+
+	if err != nil {
+		return err
+	}
+
+	return WriteJSON(w, http.StatusOK, gyms)
 }
 
 func (s *APIServer) handleGetGym(w http.ResponseWriter, req *http.Request) error {
@@ -76,7 +86,21 @@ func (s *APIServer) handleGetGym(w http.ResponseWriter, req *http.Request) error
 }
 
 func (s *APIServer) handleCreateGym(w http.ResponseWriter, req *http.Request) error {
-	return nil
+	createGymRequest := new(CreateGymRequest)
+
+	// Decode the json using our request struct
+	if err := json.NewDecoder(req.Body).Decode(createGymRequest); err != nil {
+		return err
+	}
+
+	gym := NewGym(createGymRequest.Name, createGymRequest.Description)
+
+	// Store the gym instance into our Storage
+	if err := s.store.CreateGym(gym); err != nil {
+		return err
+	}
+
+	return WriteJSON(w, http.StatusCreated, gym)
 }
 
 func (s *APIServer) handleRateGym(w http.ResponseWriter, req *http.Request) error {
