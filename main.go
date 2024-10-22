@@ -14,8 +14,6 @@ func main() {
 		log.Fatal("Failed to create DB store")
 	}
 
-	fmt.Printf("%v\n", store)
-
 	if err := store.Init(); err != nil {
 		log.Fatalf("Failed to initialize DB store %s", err.Error())
 	}

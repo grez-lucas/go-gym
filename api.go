@@ -48,6 +48,7 @@ func (s *APIServer) Run() {
 
 	router := http.NewServeMux()
 
+	router.HandleFunc("GET /healthcheck", makeHTTPHandleFunc(s.handleGetHealthcheck))
 	router.HandleFunc("GET /gyms", makeHTTPHandleFunc(s.handleGetGyms))
 	router.HandleFunc("GET /gyms/{id}", makeHTTPHandleFunc(s.handleGetGym))
 	router.HandleFunc("POST /gyms", makeHTTPHandleFunc(s.handleCreateGym))
@@ -65,6 +66,11 @@ func (s *APIServer) Run() {
 
 // Handlers: a handler handles a specific route
 // name convention is handleFooBar
+func (s *APIServer) handleGetHealthcheck(w http.ResponseWriter, req *http.Request) error {
+	log.Println("Received Healthcheck request")
+
+	return WriteJSON(w, http.StatusOK, "Healthcheck - OK")
+}
 
 func (s *APIServer) handleGetGyms(w http.ResponseWriter, req *http.Request) error {
 	log.Println("Received method to GET all gyms")
