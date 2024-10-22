@@ -11,7 +11,7 @@ func main() {
 	store, err := NewPostgreSQLStore()
 
 	if err != nil {
-		log.Fatal("Failed to create DB store")
+		log.Fatal("Failed to create DB store ", err.Error())
 	}
 
 	if err := store.Init(); err != nil {
