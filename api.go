@@ -55,7 +55,7 @@ func (s *APIServer) Run() {
 	router.HandleFunc("GET /gyms/{id}", makeHTTPHandleFunc(s.handleGetGym))
 	router.HandleFunc("POST /gyms", makeHTTPHandleFunc(s.handleCreateGym))
 	router.HandleFunc("DELETE /gyms/{id}", makeHTTPHandleFunc(s.handleDeleteGym))
-	router.HandleFunc("POST /gyms/{gymId}/ratings", makeHTTPHandleFunc(s.handleRateGym))
+	router.HandleFunc("POST /gyms/{id}/ratings", makeHTTPHandleFunc(s.handleRateGym))
 
 	server := http.Server{
 		Addr:    s.listenAddr,
@@ -87,13 +87,11 @@ func (s *APIServer) handleGetGyms(w http.ResponseWriter, req *http.Request) erro
 }
 
 func (s *APIServer) handleGetGym(w http.ResponseWriter, req *http.Request) error {
-	reqId := req.PathValue("id")
-	log.Println("Received method to GET a gym with id:", reqId)
-
-	id, err := strconv.Atoi(reqId)
+	id, err := GetID(req)
 	if err != nil {
 		return err
 	}
+	log.Println("Received method to GET a gym with id:", id)
 
 	gym, err := s.store.GetGymByID(id)
 
@@ -124,21 +122,16 @@ func (s *APIServer) handleCreateGym(w http.ResponseWriter, req *http.Request) er
 }
 
 func (s *APIServer) handleRateGym(w http.ResponseWriter, req *http.Request) error {
-
-	reqId := req.PathValue("gymId")
-	createRatingRequest := new(CreateRatingRequest)
-
-	gymId, err := strconv.Atoi(reqId)
-
+	gymId, err := GetID(req)
 	if err != nil {
 		return err
 	}
+	log.Println("Received method to RATE gym with id:", gymId)
 
+	createRatingRequest := new(CreateRatingRequest)
 	if err := json.NewDecoder(req.Body).Decode(createRatingRequest); err != nil {
 		return err
 	}
-
-	log.Println("Received method to RATE gym with id:", gymId)
 
 	gym, err := s.store.GetGymByID(gymId)
 
@@ -167,17 +160,26 @@ func (s *APIServer) handleRateGym(w http.ResponseWriter, req *http.Request) erro
 }
 
 func (s *APIServer) handleDeleteGym(w http.ResponseWriter, req *http.Request) error {
-	reqId := req.PathValue("id")
-	log.Println("Received method to DELETE gym with id:", reqId)
-	id, err := strconv.Atoi(reqId)
-
+	id, err := GetID(req)
 	if err != nil {
 		return err
 	}
+	log.Println("Received method to DELETE gym with id:", id)
 
 	if err = s.store.DeleteGym(id); err != nil {
 		return err
 	}
 
 	return WriteJSON(w, http.StatusOK, "Gym successfully deleted")
+}
+
+func GetID(req *http.Request) (int, error) {
+	reqId := req.PathValue("id")
+
+	id, err := strconv.Atoi(reqId)
+	if err != nil {
+		return id, fmt.Errorf("Invalid id given %s", reqId)
+	}
+
+	return id, nil
 }
