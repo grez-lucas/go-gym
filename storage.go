@@ -11,7 +11,7 @@ import (
 // This module is responsible for DB connections, and being DB agnostic!
 
 type Storage interface {
-	CreateGym(*Gym) error
+	CreateGym(*Gym) (*Gym, error)
 	DeleteGym(int) error
 	UpdateGym(*Gym) error
 	GetGymByID(int) (*Gym, error)
@@ -100,24 +100,32 @@ func (s *PostgreSQLStore) CreateRatingsTable() error {
 
 }
 
-func (s *PostgreSQLStore) CreateGym(gym *Gym) error {
+func (s *PostgreSQLStore) CreateGym(gym *Gym) (*Gym, error) {
 	// To avoid SQL injection, avoid using your custom Sprintf format!
 	// Instead use something like this
+	createdGym := new(Gym)
+
 	query := `
     INSERT INTO gyms (name, description, created_at, updated_at)
     values ($1, $2, $3, $4)
-    RETURNING id`
+    RETURNING id, name, description, created_at, updated_at`
 
 	id := 0
-	err := s.db.QueryRow(query, gym.Name, gym.Description, gym.CreatedAt, gym.UpdatedAt).Scan(&id)
+	err := s.db.QueryRow(query, gym.Name, gym.Description, gym.CreatedAt, gym.UpdatedAt).Scan(
+		&createdGym.ID,
+		&createdGym.Name,
+		&createdGym.Description,
+		&createdGym.CreatedAt,
+		&createdGym.UpdatedAt,
+	)
 
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	log.Printf("Created new record with ID: %v", id)
 
-	return nil
+	return createdGym, nil
 }
 
 func (s *PostgreSQLStore) DeleteGym(id int) error {

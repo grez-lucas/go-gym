@@ -111,14 +111,15 @@ func (s *APIServer) handleCreateGym(w http.ResponseWriter, req *http.Request) er
 		return err
 	}
 
-	gym := NewGym(createGymRequest.Name, createGymRequest.Description)
+	gym := NewGym(createGymRequest.Name, createGymRequest.Description) // Interface for passed gym parameters
 
-	// Store the gym instance into our Storage
-	if err := s.store.CreateGym(gym); err != nil {
+	createdGym, err := s.store.CreateGym(gym)
+
+	if err != nil {
 		return err
 	}
 
-	return WriteJSON(w, http.StatusCreated, gym)
+	return WriteJSON(w, http.StatusCreated, createdGym)
 }
 
 func (s *APIServer) handleRateGym(w http.ResponseWriter, req *http.Request) error {
