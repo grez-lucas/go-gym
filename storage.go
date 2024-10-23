@@ -129,7 +129,29 @@ func (s *PostgreSQLStore) UpdateGym(*Gym) error {
 }
 
 func (s *PostgreSQLStore) GetGymByID(id int) (*Gym, error) {
-	gym := NewGym("Example Gym", "This is an example gym")
+
+	gym := new(Gym)
+
+	query := `
+    SELECT * from gyms
+    WHERE  id=$1
+  `
+
+	row := s.db.QueryRow(query, id)
+
+	err := row.Scan(
+		&gym.ID,
+		&gym.Name,
+		&gym.Description,
+		&gym.CreatedAt,
+		&gym.UpdatedAt,
+	)
+
+	if err != nil {
+		log.Printf("Error fetching gym with ID %d: %s\n", id, err.Error())
+		return nil, err
+	}
+
 	return gym, nil
 }
 

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"strconv"
 )
 
 func WriteJSON(w http.ResponseWriter, status int, v any) error {
@@ -85,9 +86,20 @@ func (s *APIServer) handleGetGyms(w http.ResponseWriter, req *http.Request) erro
 }
 
 func (s *APIServer) handleGetGym(w http.ResponseWriter, req *http.Request) error {
-	id := req.PathValue("id")
-	log.Println("Received method to GET a gym with id:", id)
-	gym := NewGym("Sportlife", "A gym for adding sport to your life")
+	reqId := req.PathValue("id")
+	log.Println("Received method to GET a gym with id:", reqId)
+
+	id, err := strconv.Atoi(reqId)
+	if err != nil {
+		return err
+	}
+
+	gym, err := s.store.GetGymByID(id)
+
+	if err != nil {
+		return err
+	}
+
 	return WriteJSON(w, http.StatusOK, gym)
 }
 
