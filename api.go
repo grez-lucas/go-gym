@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -54,7 +55,7 @@ func (s *APIServer) Run() {
 	router.HandleFunc("GET /gyms/{id}", makeHTTPHandleFunc(s.handleGetGym))
 	router.HandleFunc("POST /gyms", makeHTTPHandleFunc(s.handleCreateGym))
 	router.HandleFunc("DELETE /gyms/{id}", makeHTTPHandleFunc(s.handleDeleteGym))
-	router.HandleFunc("POST /gyms/{id}/ratings", makeHTTPHandleFunc(s.handleRateGym))
+	router.HandleFunc("POST /gyms/{gymId}/ratings", makeHTTPHandleFunc(s.handleRateGym))
 
 	server := http.Server{
 		Addr:    s.listenAddr,
@@ -123,9 +124,46 @@ func (s *APIServer) handleCreateGym(w http.ResponseWriter, req *http.Request) er
 }
 
 func (s *APIServer) handleRateGym(w http.ResponseWriter, req *http.Request) error {
-	id := req.PathValue("id")
-	log.Println("Received method to RATE gym with id:", id)
-	return nil
+
+	reqId := req.PathValue("gymId")
+	createRatingRequest := new(CreateRatingRequest)
+
+	gymId, err := strconv.Atoi(reqId)
+
+	if err != nil {
+		return err
+	}
+
+	if err := json.NewDecoder(req.Body).Decode(createRatingRequest); err != nil {
+		return err
+	}
+
+	log.Println("Received method to RATE gym with id:", gymId)
+
+	gym, err := s.store.GetGymByID(gymId)
+
+	if err != nil {
+		return err
+	}
+
+	if gym == nil {
+		return WriteJSON(w, http.StatusNotFound, fmt.Sprintf("Gym with ID: %d not found.", gymId))
+	}
+
+	rating := NewRating(
+		gymId,
+		createRatingRequest.Rating,
+		createRatingRequest.UserName,
+		createRatingRequest.Review,
+	)
+
+	createdRating, err := s.store.CreateRating(rating)
+
+	if err != nil {
+		return err
+	}
+
+	return WriteJSON(w, http.StatusCreated, createdRating)
 }
 
 func (s *APIServer) handleDeleteGym(w http.ResponseWriter, req *http.Request) error {

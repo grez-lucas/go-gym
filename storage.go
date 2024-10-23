@@ -16,6 +16,7 @@ type Storage interface {
 	UpdateGym(*Gym) error
 	GetGymByID(int) (*Gym, error)
 	GetGyms() ([]*Gym, error)
+	CreateRating(*Rating) (*Rating, error)
 }
 
 type PostgreSQLStore struct {
@@ -110,7 +111,6 @@ func (s *PostgreSQLStore) CreateGym(gym *Gym) (*Gym, error) {
     values ($1, $2, $3, $4)
     RETURNING id, name, description, created_at, updated_at`
 
-	id := 0
 	err := s.db.QueryRow(query, gym.Name, gym.Description, gym.CreatedAt, gym.UpdatedAt).Scan(
 		&createdGym.ID,
 		&createdGym.Name,
@@ -123,7 +123,7 @@ func (s *PostgreSQLStore) CreateGym(gym *Gym) (*Gym, error) {
 		return nil, err
 	}
 
-	log.Printf("Created new record with ID: %v", id)
+	log.Printf("Created new record with ID: %v", &createdGym.ID)
 
 	return createdGym, nil
 }
@@ -211,4 +211,33 @@ func (s *PostgreSQLStore) GetGyms() ([]*Gym, error) {
 	}
 
 	return gyms, nil
+}
+
+func (s *PostgreSQLStore) CreateRating(r *Rating) (*Rating, error) {
+
+	createdRating := new(Rating)
+
+	query := `
+    INSERT INTO ratings (gym_id, rating, user_name, review, created_at, updated_at)
+    values ($1, $2, $3, $4, $5, $6)
+    RETURNING id, gym_id, rating, user_name, review, created_at, updated_at
+  `
+
+	err := s.db.QueryRow(query, r.GymID, r.Rating, r.UserName, r.Review, r.CreatedAt, r.UpdatedAt).Scan(
+		&createdRating.ID,
+		&createdRating.GymID,
+		&createdRating.Rating,
+		&createdRating.UserName,
+		&createdRating.Review,
+		&createdRating.CreatedAt,
+		&createdRating.UpdatedAt,
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	log.Printf("Created new record with ID: %d", &createdRating.ID)
+
+	return createdRating, nil
 }
