@@ -128,7 +128,17 @@ func (s *APIServer) handleRateGym(w http.ResponseWriter, req *http.Request) erro
 }
 
 func (s *APIServer) handleDeleteGym(w http.ResponseWriter, req *http.Request) error {
-	id := req.PathValue("id")
-	log.Println("Received method to DELETE gym with id:", id)
-	return nil
+	reqId := req.PathValue("id")
+	log.Println("Received method to DELETE gym with id:", reqId)
+	id, err := strconv.Atoi(reqId)
+
+	if err != nil {
+		return err
+	}
+
+	if err = s.store.DeleteGym(id); err != nil {
+		return err
+	}
+
+	return WriteJSON(w, http.StatusOK, "Gym successfully deleted")
 }

@@ -121,6 +121,20 @@ func (s *PostgreSQLStore) CreateGym(gym *Gym) error {
 }
 
 func (s *PostgreSQLStore) DeleteGym(id int) error {
+
+	query := `
+    DELETE FROM gyms
+    WHERE id=$1
+  `
+
+	_, err := s.db.Exec(query, id)
+
+	if err != nil {
+		return err
+	}
+
+	log.Printf("Gym with id %d successfully deleted\n", id)
+
 	return nil
 }
 
