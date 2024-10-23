@@ -99,6 +99,15 @@ func (s *APIServer) handleGetGym(w http.ResponseWriter, req *http.Request) error
 		return err
 	}
 
+	// Get the average rating for said gym
+	avgRating, err := s.store.GetAverageRating(id)
+
+	if err != nil {
+		return err
+	}
+
+	gym.Rating = avgRating
+
 	return WriteJSON(w, http.StatusOK, gym)
 }
 

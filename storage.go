@@ -17,6 +17,7 @@ type Storage interface {
 	GetGymByID(int) (*Gym, error)
 	GetGyms() ([]*Gym, error)
 	CreateRating(*Rating) (*Rating, error)
+	GetAverageRating(int) (float32, error)
 }
 
 type PostgreSQLStore struct {
@@ -194,7 +195,6 @@ func (s *PostgreSQLStore) GetGyms() ([]*Gym, error) {
 	for rows.Next() {
 		gym := new(Gym)
 		err := rows.Scan( // Copy the values of row into our destination Gym
-
 			&gym.ID,
 			&gym.Name,
 			&gym.Description,
@@ -206,6 +206,15 @@ func (s *PostgreSQLStore) GetGyms() ([]*Gym, error) {
 			log.Printf("Error fetching gyms: %s\n", err.Error())
 			return nil, err
 		}
+
+		log.Println("Getting average rating for gym with ID:", gym.ID)
+		avgRating, err := s.GetAverageRating(gym.ID)
+
+		if err != nil {
+			return nil, err
+		}
+
+		gym.Rating = avgRating
 
 		gyms = append(gyms, gym)
 	}
@@ -240,4 +249,21 @@ func (s *PostgreSQLStore) CreateRating(r *Rating) (*Rating, error) {
 	log.Printf("Created new record with ID: %d", &createdRating.ID)
 
 	return createdRating, nil
+}
+
+func (s *PostgreSQLStore) GetAverageRating(id int) (float32, error) {
+
+	query := `
+    SELECT COALESCE( AVG(rating), 0 ) AS average_rating
+    FROM ratings
+    WHERE gym_id=$1
+  `
+
+	var avgRating float32
+	if err := s.db.QueryRow(query, id).Scan(&avgRating); err != nil {
+		log.Printf("Error calculating average rating: %s", err.Error())
+		return avgRating, err
+	}
+
+	return avgRating, nil
 }

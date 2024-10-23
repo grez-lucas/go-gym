@@ -13,7 +13,7 @@ type Gym struct {
 	ID          int       `json:"id"`
 	Name        string    `json:"name"`
 	Description string    `json:"description"`
-	Rating      int       `json:"rating"`
+	Rating      float32   `json:"rating"`
 	CreatedAt   time.Time `json:"createdAt"`
 	UpdatedAt   time.Time `json:"updatedAt"`
 }
