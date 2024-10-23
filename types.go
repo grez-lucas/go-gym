@@ -1,12 +1,11 @@
 package main
 
 import (
-	"math/rand"
 	"time"
 )
 
 type CreateGymRequest struct {
-	Name        string `json:"firstName"`
+	Name        string `json:"name"`
 	Description string `json:"description"`
 }
 
@@ -21,7 +20,6 @@ type Gym struct {
 
 func NewGym(name string, description string) *Gym {
 	return &Gym{
-		ID:          rand.Intn(10000),
 		Name:        name,
 		Description: description,
 		Rating:      0,
