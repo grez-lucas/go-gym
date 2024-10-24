@@ -223,32 +223,15 @@ func (s *PostgreSQLStore) GetGyms() ([]*Gym, error) {
 }
 
 func (s *PostgreSQLStore) CreateRating(r *Rating) (*Rating, error) {
-
-	createdRating := new(Rating)
-
 	query := `
     INSERT INTO ratings (gym_id, rating, user_name, review, created_at, updated_at)
     values ($1, $2, $3, $4, $5, $6)
     RETURNING id, gym_id, rating, user_name, review, created_at, updated_at
   `
 
-	err := s.db.QueryRow(query, r.GymID, r.Rating, r.UserName, r.Review, r.CreatedAt, r.UpdatedAt).Scan(
-		&createdRating.ID,
-		&createdRating.GymID,
-		&createdRating.Rating,
-		&createdRating.UserName,
-		&createdRating.Review,
-		&createdRating.CreatedAt,
-		&createdRating.UpdatedAt,
-	)
+	row := s.db.QueryRow(query, r.GymID, r.Rating, r.UserName, r.Review, r.CreatedAt, r.UpdatedAt)
 
-	if err != nil {
-		return nil, err
-	}
-
-	log.Printf("Created new record with ID: %d", &createdRating.ID)
-
-	return createdRating, nil
+	return scanIntoRating(row)
 }
 
 func (s *PostgreSQLStore) GetAverageRating(id int) (float32, error) {
@@ -266,4 +249,25 @@ func (s *PostgreSQLStore) GetAverageRating(id int) (float32, error) {
 	}
 
 	return avgRating, nil
+}
+
+func scanIntoRating(row *sql.Row) (*Rating, error) {
+	createdRating := new(Rating)
+
+	err := row.Scan(
+		&createdRating.ID,
+		&createdRating.GymID,
+		&createdRating.Rating,
+		&createdRating.UserName,
+		&createdRating.Review,
+		&createdRating.CreatedAt,
+		&createdRating.UpdatedAt,
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return createdRating, nil
+
 }
