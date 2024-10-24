@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"fmt"
 	"log"
 	"os"
 
@@ -105,28 +106,23 @@ func (s *PostgreSQLStore) CreateRatingsTable() error {
 func (s *PostgreSQLStore) CreateGym(gym *Gym) (*Gym, error) {
 	// To avoid SQL injection, avoid using your custom Sprintf format!
 	// Instead use something like this
-	createdGym := new(Gym)
-
 	query := `
     INSERT INTO gyms (name, description, created_at, updated_at)
     values ($1, $2, $3, $4)
     RETURNING id, name, description, created_at, updated_at`
 
-	err := s.db.QueryRow(query, gym.Name, gym.Description, gym.CreatedAt, gym.UpdatedAt).Scan(
-		&createdGym.ID,
-		&createdGym.Name,
-		&createdGym.Description,
-		&createdGym.CreatedAt,
-		&createdGym.UpdatedAt,
-	)
+	rows, err := s.db.Query(query, gym.Name, gym.Description, gym.CreatedAt, gym.UpdatedAt)
 
 	if err != nil {
+		log.Println("Error creating Gym: ", err.Error())
 		return nil, err
 	}
 
-	log.Printf("Created new record with ID: %v", &createdGym.ID)
+	for rows.Next() {
+		return scanIntoGym(rows)
+	}
 
-	return createdGym, nil
+	return nil, fmt.Errorf("Error creating Gym")
 }
 
 func (s *PostgreSQLStore) DeleteGym(id int) error {
@@ -153,29 +149,23 @@ func (s *PostgreSQLStore) UpdateGym(*Gym) error {
 
 func (s *PostgreSQLStore) GetGymByID(id int) (*Gym, error) {
 
-	gym := new(Gym)
-
 	query := `
     SELECT * from gyms
     WHERE  id=$1
   `
 
-	row := s.db.QueryRow(query, id)
-
-	err := row.Scan(
-		&gym.ID,
-		&gym.Name,
-		&gym.Description,
-		&gym.CreatedAt,
-		&gym.UpdatedAt,
-	)
+	rows, err := s.db.Query(query, id)
 
 	if err != nil {
-		log.Printf("Error fetching gym with ID %d: %s\n", id, err.Error())
+		log.Printf("Error getting gym with ID: %d - %s\n", id, err.Error())
 		return nil, err
 	}
 
-	return gym, nil
+	for rows.Next() {
+		return scanIntoGym(rows)
+	}
+
+	return nil, fmt.Errorf("Gym with ID %d not found", id)
 }
 
 func (s *PostgreSQLStore) GetGyms() ([]*Gym, error) {
@@ -188,22 +178,14 @@ func (s *PostgreSQLStore) GetGyms() ([]*Gym, error) {
 
 	if err != nil {
 		log.Printf("Error fetching gyms: %s\n", err.Error())
-		return gyms, err
+		return nil, err
 	}
 
 	// For each row, save gym to memory and check for errors
 	for rows.Next() {
-		gym := new(Gym)
-		err := rows.Scan( // Copy the values of row into our destination Gym
-			&gym.ID,
-			&gym.Name,
-			&gym.Description,
-			&gym.CreatedAt,
-			&gym.UpdatedAt,
-		)
+		gym, err := scanIntoGym(rows)
 
 		if err != nil {
-			log.Printf("Error fetching gyms: %s\n", err.Error())
 			return nil, err
 		}
 
@@ -251,6 +233,25 @@ func (s *PostgreSQLStore) GetAverageRating(id int) (float32, error) {
 	return avgRating, nil
 }
 
+func scanIntoGym(row *sql.Rows) (*Gym, error) {
+	gym := new(Gym)
+
+	err := row.Scan(
+		&gym.ID,
+		&gym.Name,
+		&gym.Description,
+		&gym.CreatedAt,
+		&gym.UpdatedAt,
+	)
+
+	if err != nil {
+		log.Printf("SQL Error when scanning Gym: %s", err.Error())
+		return nil, err
+	}
+
+	return gym, nil
+}
+
 func scanIntoRating(row *sql.Row) (*Rating, error) {
 	createdRating := new(Rating)
 
@@ -265,6 +266,7 @@ func scanIntoRating(row *sql.Row) (*Rating, error) {
 	)
 
 	if err != nil {
+		log.Printf("SQL Error when scanning Rating: %s", err.Error())
 		return nil, err
 	}
 
