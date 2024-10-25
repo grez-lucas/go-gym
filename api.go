@@ -179,7 +179,7 @@ func (s *APIServer) handleDeleteGym(w http.ResponseWriter, req *http.Request) er
 		return err
 	}
 
-	return WriteJSON(w, http.StatusOK, "Gym successfully deleted")
+	return WriteJSON(w, http.StatusOK, map[string]int{"Gym successfully deleted": id})
 }
 
 func GetID(req *http.Request) (int, error) {
