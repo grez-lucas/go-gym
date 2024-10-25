@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
-	"os"
 
 	_ "github.com/lib/pq"
 )
@@ -26,13 +25,10 @@ type PostgreSQLStore struct {
 }
 
 func NewPostgreSQLStore() (*PostgreSQLStore, error) {
-	connStr, found := os.LookupEnv("DATABASE_URL")
 
-	// For running locally
-	if !found {
-		connStr = "host=localhost user=postgres dbname=postgres password=gogym sslmode=disable"
-	}
+	config := LoadConfig()
 
+	connStr := config.PostgreSQLConnStr()
 	db, err := sql.Open("postgres", connStr)
 
 	if err != nil {
