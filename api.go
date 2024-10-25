@@ -23,7 +23,7 @@ type APIServer struct {
 type APIFunc func(http.ResponseWriter, *http.Request) error
 
 type APIError struct {
-	Error string
+	Error string `json:"error"`
 }
 
 // To decorate our APIFunc into an HTTP handler
