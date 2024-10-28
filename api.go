@@ -50,13 +50,13 @@ func (s *APIServer) Run() {
 
 	router := http.NewServeMux()
 
-	router.HandleFunc("GET /healthcheck", WithJWTAuth(makeHTTPHandleFunc(s.handleGetHealthcheck)))
+	router.HandleFunc("GET /healthcheck", makeHTTPHandleFunc(s.handleGetHealthcheck))
 	router.HandleFunc("GET /gyms", makeHTTPHandleFunc(s.handleGetGyms))
 	router.HandleFunc("GET /gyms/{id}", makeHTTPHandleFunc(s.handleGetGym))
 	router.HandleFunc("POST /gyms", makeHTTPHandleFunc(s.handleCreateGym))
 	router.HandleFunc("DELETE /gyms/{id}", makeHTTPHandleFunc(s.handleDeleteGym))
 	router.HandleFunc("POST /gyms/{id}/ratings", makeHTTPHandleFunc(s.handleRateGym))
-	router.HandleFunc("GET /accounts", makeHTTPHandleFunc(s.handleGetAccounts))
+	router.HandleFunc("GET /accounts", WithJWTAuth(makeHTTPHandleFunc(s.handleGetAccounts)))
 	router.HandleFunc("POST /accounts", makeHTTPHandleFunc(s.handleCreateAccount))
 
 	server := http.Server{
@@ -208,6 +208,16 @@ func (s *APIServer) handleCreateAccount(w http.ResponseWriter, req *http.Request
 	if err != nil {
 		return err
 	}
+
+	// Create a JWT for said account
+
+	tokenStr, err := CreateJWT(createdAccount)
+
+	if err != nil {
+		return err
+	}
+
+	log.Printf("Created JWT Token `%s` for account `%d`", tokenStr, createdAccount.ID)
 
 	return WriteJSON(w, http.StatusCreated, createdAccount)
 }

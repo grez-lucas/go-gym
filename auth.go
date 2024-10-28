@@ -36,6 +36,19 @@ func WithJWTAuth(handlerFunc http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
+func CreateJWT(account *Account) (string, error) {
+
+	claims := &jwt.MapClaims{
+		"expiresAt":   15000,
+		"accountName": account.UserName,
+	}
+
+	secret := LoadConfig().JWTSecret
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+
+	return token.SignedString([]byte(secret))
+}
+
 func ValidateJWT(tokenString string) (*jwt.Token, error) {
 
 	jwtSecret, found := os.LookupEnv("JWT_SECRET")
