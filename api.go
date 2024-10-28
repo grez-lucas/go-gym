@@ -50,12 +50,13 @@ func (s *APIServer) Run() {
 
 	router := http.NewServeMux()
 
-	router.HandleFunc("GET /healthcheck", makeHTTPHandleFunc(s.handleGetHealthcheck))
+	router.HandleFunc("GET /healthcheck", WithJWTAuth(makeHTTPHandleFunc(s.handleGetHealthcheck)))
 	router.HandleFunc("GET /gyms", makeHTTPHandleFunc(s.handleGetGyms))
 	router.HandleFunc("GET /gyms/{id}", makeHTTPHandleFunc(s.handleGetGym))
 	router.HandleFunc("POST /gyms", makeHTTPHandleFunc(s.handleCreateGym))
 	router.HandleFunc("DELETE /gyms/{id}", makeHTTPHandleFunc(s.handleDeleteGym))
 	router.HandleFunc("POST /gyms/{id}/ratings", makeHTTPHandleFunc(s.handleRateGym))
+	router.HandleFunc("POST /accounts", makeHTTPHandleFunc(s.handleCreateAccount))
 
 	server := http.Server{
 		Addr:    s.listenAddr,
@@ -191,4 +192,21 @@ func GetID(req *http.Request) (int, error) {
 	}
 
 	return id, nil
+}
+
+func (s *APIServer) handleCreateAccount(w http.ResponseWriter, req *http.Request) error {
+	createAccountRequest := new(CreateAccountRequest)
+	if err := json.NewDecoder(req.Body).Decode(createAccountRequest); err != nil {
+		return err
+	}
+
+	account := NewAccount(createAccountRequest.UserName, createAccountRequest.Password)
+
+	createdAccount, err := s.store.CreateAccount(account)
+
+	if err != nil {
+		return err
+	}
+
+	return WriteJSON(w, http.StatusCreated, createdAccount)
 }

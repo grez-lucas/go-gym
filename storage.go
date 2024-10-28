@@ -18,6 +18,7 @@ type Storage interface {
 	GetGyms() ([]*Gym, error)
 	CreateRating(*Rating) (*Rating, error)
 	GetAverageRating(int) (float32, error)
+	CreateAccount(*Account) (*Account, error)
 }
 
 type PostgreSQLStore struct {
@@ -54,6 +55,10 @@ func (s *PostgreSQLStore) Init() error {
 	}
 
 	if err := s.CreateRatingsTable(); err != nil {
+		return err
+	}
+
+	if err := s.CreateAccountsTable(); err != nil {
 		return err
 	}
 
@@ -97,6 +102,25 @@ func (s *PostgreSQLStore) CreateRatingsTable() error {
 
 	return nil
 
+}
+
+func (s *PostgreSQLStore) CreateAccountsTable() error {
+	query := `
+    CREATE table if not exists accounts (
+      id SERIAL PRIMARY KEY,
+      username VARCHAR(100) UNIQUE NOT NULL,
+      password VARCHAR(255) NOT NULL, 
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  )`
+
+	_, err := s.db.Query(query)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (s *PostgreSQLStore) CreateGym(gym *Gym) (*Gym, error) {
@@ -212,6 +236,28 @@ func (s *PostgreSQLStore) CreateRating(r *Rating) (*Rating, error) {
 	return scanIntoRating(row)
 }
 
+func (s *PostgreSQLStore) CreateAccount(a *Account) (*Account, error) {
+
+	query := `
+    INSERT INTO accounts (username, password, created_at, updated_at)
+    VALUES ($1, $2, $3, $4)
+    RETURNING id, username, password, created_at, updated_at
+  `
+
+	rows, err := s.db.Query(query, a.UserName, a.Password, a.CreatedAt, a.UpdatedAt)
+
+	if err != nil {
+		return nil, fmt.Errorf("DB error when creating account: `%s`", err.Error())
+	}
+
+	for rows.Next() {
+		return scanIntoAccount(rows)
+	}
+
+	return nil, fmt.Errorf("Error creating account")
+
+}
+
 func (s *PostgreSQLStore) GetAverageRating(id int) (float32, error) {
 
 	query := `
@@ -267,5 +313,24 @@ func scanIntoRating(row *sql.Row) (*Rating, error) {
 	}
 
 	return createdRating, nil
+
+}
+
+func scanIntoAccount(rows *sql.Rows) (*Account, error) {
+	createdAccount := new(Account)
+
+	err := rows.Scan(
+		&createdAccount.ID,
+		&createdAccount.UserName,
+		&createdAccount.Password,
+		&createdAccount.CreatedAt,
+		&createdAccount.UpdatedAt,
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return createdAccount, nil
 
 }
