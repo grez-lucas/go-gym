@@ -6,6 +6,7 @@ import (
 	"log"
 
 	_ "github.com/lib/pq"
+	"golang.org/x/crypto/bcrypt"
 )
 
 // This module is responsible for DB connections, and being DB agnostic!
@@ -244,7 +245,13 @@ func (s *PostgreSQLStore) CreateAccount(a *Account) (*Account, error) {
     RETURNING id, username, password, created_at, updated_at
   `
 
-	rows, err := s.db.Query(query, a.UserName, a.Password, a.CreatedAt, a.UpdatedAt)
+	hashedPassword, err := hashPassword(a.Password)
+
+	if err != nil {
+		return nil, fmt.Errorf("Error hashing password: `%s`", err.Error())
+	}
+
+	rows, err := s.db.Query(query, a.UserName, hashedPassword, a.CreatedAt, a.UpdatedAt)
 
 	if err != nil {
 		return nil, fmt.Errorf("DB error when creating account: `%s`", err.Error())
@@ -332,5 +339,22 @@ func scanIntoAccount(rows *sql.Rows) (*Account, error) {
 	}
 
 	return createdAccount, nil
+
+}
+
+func hashPassword(password string) (string, error) {
+	bytes, err := bcrypt.GenerateFromPassword([]byte(password), 14)
+
+	if err != nil {
+		return "", err
+	}
+
+	return string(bytes), nil
+}
+
+func verifyHashedPassword(password string, hashedPass string) bool {
+	err := bcrypt.CompareHashAndPassword([]byte(hashedPass), []byte(password))
+
+	return err == nil
 
 }
