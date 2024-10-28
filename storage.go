@@ -21,6 +21,7 @@ type Storage interface {
 	GetAverageRating(int) (float32, error)
 	CreateAccount(*Account) (*Account, error)
 	GetAccounts() ([]*Account, error)
+	GetAccountByUsername(string) (*Account, error)
 }
 
 type PostgreSQLStore struct {
@@ -291,6 +292,27 @@ func (s *PostgreSQLStore) GetAccounts() ([]*Account, error) {
 	return accounts, nil
 }
 
+func (s *PostgreSQLStore) GetAccountByUsername(username string) (*Account, error) {
+
+	query := `
+  SELECT *
+  FROM accounts
+  WHERE username=$1
+  `
+
+	rows, err := s.db.Query(query, username)
+
+	if err != nil {
+		return nil, fmt.Errorf("DB error when fetching account: `%v`", err.Error())
+	}
+
+	for rows.Next() {
+		return scanIntoAccount(rows)
+	}
+
+	return nil, fmt.Errorf("DB error: Account not found")
+}
+
 func (s *PostgreSQLStore) GetAverageRating(id int) (float32, error) {
 
 	query := `
@@ -378,7 +400,7 @@ func hashPassword(password string) (string, error) {
 	return string(bytes), nil
 }
 
-func verifyHashedPassword(password string, hashedPass string) bool {
+func VerifyHashedPassword(password string, hashedPass string) bool {
 	err := bcrypt.CompareHashAndPassword([]byte(hashedPass), []byte(password))
 
 	return err == nil

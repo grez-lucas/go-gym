@@ -4,6 +4,16 @@ import (
 	"time"
 )
 
+type LoginRequest struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
+}
+
+type LoginResponse struct {
+	Token     string `json:"token"`
+	AccountID int    `json:"ID"`
+}
+
 type CreateGymRequest struct {
 	Name        string `json:"name"`
 	Description string `json:"description"`

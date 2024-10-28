@@ -51,6 +51,7 @@ func (s *APIServer) Run() {
 	router := http.NewServeMux()
 
 	router.HandleFunc("GET /healthcheck", makeHTTPHandleFunc(s.handleGetHealthcheck))
+	router.HandleFunc("GET /login", makeHTTPHandleFunc(s.handleGetLogin))
 	router.HandleFunc("GET /gyms", makeHTTPHandleFunc(s.handleGetGyms))
 	router.HandleFunc("GET /gyms/{id}", makeHTTPHandleFunc(s.handleGetGym))
 	router.HandleFunc("POST /gyms", makeHTTPHandleFunc(s.handleCreateGym))
@@ -58,6 +59,8 @@ func (s *APIServer) Run() {
 	router.HandleFunc("POST /gyms/{id}/ratings", makeHTTPHandleFunc(s.handleRateGym))
 	router.HandleFunc("GET /accounts", WithJWTAuth(makeHTTPHandleFunc(s.handleGetAccounts)))
 	router.HandleFunc("POST /accounts", makeHTTPHandleFunc(s.handleCreateAccount))
+	// TODO: Add tests for types if possible
+	// TODO: Only authorized accounts may POST a gym rating
 
 	server := http.Server{
 		Addr:    s.listenAddr,
@@ -74,6 +77,36 @@ func (s *APIServer) handleGetHealthcheck(w http.ResponseWriter, req *http.Reques
 	log.Println("Received Healthcheck request")
 
 	return WriteJSON(w, http.StatusOK, "Healthcheck - OK")
+}
+
+func (s *APIServer) handleGetLogin(w http.ResponseWriter, req *http.Request) error {
+	var loginRequest LoginRequest
+
+	if err := json.NewDecoder(req.Body).Decode(&loginRequest); err != nil {
+		return err
+	}
+
+	acc, err := s.store.GetAccountByUsername(loginRequest.Username)
+
+	if err != nil {
+		return err
+	}
+
+	// Validate password
+
+	if !VerifyHashedPassword(loginRequest.Password, acc.Password) {
+		return fmt.Errorf("Invalid Password")
+	}
+
+	token, err := CreateJWT(acc)
+
+	if err != nil {
+		return err
+	}
+
+	resp := LoginResponse{Token: token, AccountID: acc.ID}
+
+	return WriteJSON(w, http.StatusOK, resp)
 }
 
 func (s *APIServer) handleGetGyms(w http.ResponseWriter, req *http.Request) error {
