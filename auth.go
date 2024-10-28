@@ -1,10 +1,10 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net/http"
-	"os"
 
 	"github.com/golang-jwt/jwt/v5"
 )
@@ -27,20 +27,45 @@ func WithJWTAuth(handlerFunc http.HandlerFunc) http.HandlerFunc {
 
 		tokenString := req.Header.Get("x-jwt-token")
 
-		if _, err := ValidateJWT(tokenString); err != nil {
+		token, err := ValidateJWT(tokenString)
+
+		if err != nil {
+			log.Printf("Error validating JWT: `%v`", err.Error())
 			WriteUnauthorized(w)
 			return
 		}
 
-		handlerFunc(w, req)
+		// Check if token is valid to extract claims
+		if !token.Valid {
+			log.Printf("Token is invalid \n")
+			WriteUnauthorized(w)
+			return
+		}
+
+		claims, ok := token.Claims.(jwt.MapClaims)
+
+		if !ok {
+			log.Printf("Token has invalid claims \n")
+			WriteUnauthorized(w)
+			return
+		}
+
+		accountID := int64(claims["accountID"].(float64))
+
+		// Store the ID in GoLang context
+		// So that we can pass it around to later methods which require auth
+
+		ctx := context.WithValue(req.Context(), accountID, accountID)
+
+		handlerFunc(w, req.WithContext(ctx))
 	}
 }
 
 func CreateJWT(account *Account) (string, error) {
 
 	claims := &jwt.MapClaims{
-		"expiresAt":   15000,
-		"accountName": account.UserName,
+		"expiresAt": 15000,
+		"accountID": account.ID,
 	}
 
 	secret := LoadConfig().JWTSecret
@@ -51,11 +76,7 @@ func CreateJWT(account *Account) (string, error) {
 
 func ValidateJWT(tokenString string) (*jwt.Token, error) {
 
-	jwtSecret, found := os.LookupEnv("JWT_SECRET")
-
-	if !found {
-		return nil, fmt.Errorf("Couldn't find environment variable JWT_SECRET")
-	}
+	jwtSecret := LoadConfig().JWTSecret
 
 	return jwt.Parse(tokenString, func(t *jwt.Token) (interface{}, error) {
 		// Don't forget to validate the alg is what you expect:
