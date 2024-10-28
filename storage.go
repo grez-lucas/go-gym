@@ -20,6 +20,7 @@ type Storage interface {
 	CreateRating(*Rating) (*Rating, error)
 	GetAverageRating(int) (float32, error)
 	CreateAccount(*Account) (*Account, error)
+	GetAccounts() ([]*Account, error)
 }
 
 type PostgreSQLStore struct {
@@ -263,6 +264,31 @@ func (s *PostgreSQLStore) CreateAccount(a *Account) (*Account, error) {
 
 	return nil, fmt.Errorf("Error creating account")
 
+}
+
+func (s *PostgreSQLStore) GetAccounts() ([]*Account, error) {
+
+	query := `SELECT * from accounts`
+
+	rows, err := s.db.Query(query)
+
+	if err != nil {
+		return nil, err
+	}
+
+	accounts := []*Account{}
+
+	for rows.Next() {
+		account, err := scanIntoAccount(rows)
+
+		if err != nil {
+			return nil, err
+		}
+
+		accounts = append(accounts, account)
+	}
+
+	return accounts, nil
 }
 
 func (s *PostgreSQLStore) GetAverageRating(id int) (float32, error) {
