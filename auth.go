@@ -28,7 +28,7 @@ func WithJWTAuth(handlerFunc http.HandlerFunc) http.HandlerFunc {
 		tokenString := req.Header.Get("x-jwt-token")
 
 		if _, err := ValidateJWT(tokenString); err != nil {
-			WriteJSON(w, http.StatusForbidden, APIError{"Invalid token"})
+			WriteUnauthorized(w)
 			return
 		}
 
