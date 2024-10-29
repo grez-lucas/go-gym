@@ -21,6 +21,7 @@ type Storage interface {
 	GetAverageRating(int) (float32, error)
 	CreateAccount(*Account) (*Account, error)
 	GetAccounts() ([]*Account, error)
+	GetAccountByID(int) (*Account, error)
 	GetAccountByUsername(string) (*Account, error)
 }
 
@@ -328,6 +329,28 @@ func (s *PostgreSQLStore) GetAverageRating(id int) (float32, error) {
 	}
 
 	return avgRating, nil
+}
+
+func (s *PostgreSQLStore) GetAccountByID(id int) (*Account, error) {
+
+	query := `
+    SELECT *
+    FROM accounts
+    WHERE id=$1
+  `
+
+	rows, err := s.db.Query(query, id)
+
+	if err != nil {
+		return nil, err
+	}
+
+	for rows.Next() {
+		return scanIntoAccount(rows)
+	}
+
+	return nil, fmt.Errorf("DB error: Account not found")
+
 }
 
 func scanIntoGym(row *sql.Rows) (*Gym, error) {

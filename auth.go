@@ -9,11 +9,21 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
+type ContextKey string
+
+const ContextAccountKey ContextKey = "account"
+
 func WriteUnauthorized(w http.ResponseWriter) {
 
 	w.WriteHeader(http.StatusUnauthorized)
 	w.Write([]byte(http.StatusText(http.StatusUnauthorized)))
 
+}
+
+func AccountIDFromContext(ctx context.Context) (int64, bool) {
+	v, ok := ctx.Value(ContextAccountKey).(int64)
+
+	return v, ok
 }
 
 // To decorate certain HTTP handlers with JWT authentication (the ones who
@@ -55,7 +65,7 @@ func WithJWTAuth(handlerFunc http.HandlerFunc) http.HandlerFunc {
 		// Store the ID in GoLang context
 		// So that we can pass it around to later methods which require auth
 
-		ctx := context.WithValue(req.Context(), accountID, accountID)
+		ctx := context.WithValue(req.Context(), ContextAccountKey, accountID)
 
 		handlerFunc(w, req.WithContext(ctx))
 	}

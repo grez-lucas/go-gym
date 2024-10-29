@@ -39,9 +39,8 @@ func NewGym(name string, description string) *Gym {
 }
 
 type CreateRatingRequest struct {
-	Rating   int    `json:"rating"`
-	UserName string `json:"userName"`
-	Review   string `json:"review"`
+	Rating int    `json:"rating"`
+	Review string `json:"review"`
 }
 
 type Rating struct {
