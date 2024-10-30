@@ -1,4 +1,4 @@
-package main
+package http
 
 import (
 	"encoding/json"
@@ -6,6 +6,9 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+
+	"github.com/grez-lucas/go-gym/pkg/domain"
+	"github.com/grez-lucas/go-gym/pkg/storage"
 )
 
 func WriteJSON(w http.ResponseWriter, status int, v any) error {
@@ -17,7 +20,7 @@ func WriteJSON(w http.ResponseWriter, status int, v any) error {
 type APIServer struct {
 	listenAddr string
 	// This way we can abstract the DB to anything that implements the Storage interface
-	store Storage
+	store storage.Storage
 }
 
 type APIFunc func(http.ResponseWriter, *http.Request) error
@@ -38,7 +41,7 @@ func makeHTTPHandleFunc(f APIFunc) http.HandlerFunc {
 	}
 }
 
-func NewAPIServer(listenAddr string, store Storage) *APIServer {
+func NewAPIServer(listenAddr string, store storage.Storage) *APIServer {
 	return &APIServer{
 		listenAddr: listenAddr,
 		store:      store,
@@ -59,8 +62,6 @@ func (s *APIServer) Run() {
 	router.HandleFunc("POST /gyms/{id}/ratings", WithJWTAuth(makeHTTPHandleFunc(s.handleRateGym)))
 	router.HandleFunc("GET /accounts", WithJWTAuth(makeHTTPHandleFunc(s.handleGetAccounts)))
 	router.HandleFunc("POST /accounts", makeHTTPHandleFunc(s.handleCreateAccount))
-	// TODO: Add tests for types if possible
-	// TODO: Only authorized accounts may POST a gym rating
 
 	server := http.Server{
 		Addr:    s.listenAddr,
@@ -94,7 +95,7 @@ func (s *APIServer) handleGetLogin(w http.ResponseWriter, req *http.Request) err
 
 	// Validate password
 
-	if !VerifyHashedPassword(loginRequest.Password, acc.Password) {
+	if !storage.VerifyHashedPassword(loginRequest.Password, acc.Password) {
 		return fmt.Errorf("Invalid Password")
 	}
 
@@ -147,14 +148,14 @@ func (s *APIServer) handleGetGym(w http.ResponseWriter, req *http.Request) error
 }
 
 func (s *APIServer) handleCreateGym(w http.ResponseWriter, req *http.Request) error {
-	createGymRequest := new(CreateGymRequest)
+	createGymRequest := new(domain.CreateGymRequest)
 
 	// Decode the json using our request struct
 	if err := json.NewDecoder(req.Body).Decode(createGymRequest); err != nil {
 		return err
 	}
 
-	gym := NewGym(createGymRequest.Name, createGymRequest.Description) // Interface for passed gym parameters
+	gym := domain.NewGym(createGymRequest.Name, createGymRequest.Description) // Interface for passed gym parameters
 
 	createdGym, err := s.store.CreateGym(gym)
 
@@ -184,7 +185,7 @@ func (s *APIServer) handleRateGym(w http.ResponseWriter, req *http.Request) erro
 	}
 	log.Println("Received method to RATE gym with id:", gymId)
 
-	createRatingRequest := new(CreateRatingRequest)
+	createRatingRequest := new(domain.CreateRatingRequest)
 	if err := json.NewDecoder(req.Body).Decode(createRatingRequest); err != nil {
 		return err
 	}
@@ -199,7 +200,7 @@ func (s *APIServer) handleRateGym(w http.ResponseWriter, req *http.Request) erro
 		return WriteJSON(w, http.StatusNotFound, fmt.Sprintf("Gym with ID: %d not found.", gymId))
 	}
 
-	rating := NewRating(
+	rating := domain.NewRating(
 		gymId,
 		createRatingRequest.Rating,
 		acc.UserName,
@@ -241,12 +242,12 @@ func GetID(req *http.Request) (int, error) {
 }
 
 func (s *APIServer) handleCreateAccount(w http.ResponseWriter, req *http.Request) error {
-	createAccountRequest := new(CreateAccountRequest)
+	createAccountRequest := new(domain.CreateAccountRequest)
 	if err := json.NewDecoder(req.Body).Decode(createAccountRequest); err != nil {
 		return err
 	}
 
-	account := NewAccount(createAccountRequest.UserName, createAccountRequest.Password)
+	account := domain.NewAccount(createAccountRequest.UserName, createAccountRequest.Password)
 
 	createdAccount, err := s.store.CreateAccount(account)
 

@@ -7,7 +7,7 @@ vet:	fmt
 	go vet ./...
 
 build: vet
-	go build -o ./bin/gogym
+	go build -o ./bin/gogym ./cmd/api
 
 run: build
 	./bin/gogym

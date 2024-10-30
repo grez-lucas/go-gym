@@ -1,4 +1,4 @@
-package main
+package http
 
 import (
 	"context"
@@ -7,7 +7,19 @@ import (
 	"net/http"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/grez-lucas/go-gym/pkg/config"
+	"github.com/grez-lucas/go-gym/pkg/domain"
 )
+
+type LoginRequest struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
+}
+
+type LoginResponse struct {
+	Token     string `json:"token"`
+	AccountID int    `json:"ID"`
+}
 
 type ContextKey string
 
@@ -71,14 +83,14 @@ func WithJWTAuth(handlerFunc http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
-func CreateJWT(account *Account) (string, error) {
+func CreateJWT(account *domain.Account) (string, error) {
 
 	claims := &jwt.MapClaims{
 		"expiresAt": 15000,
 		"accountID": account.ID,
 	}
 
-	secret := LoadConfig().JWTSecret
+	secret := config.LoadConfig().JWTSecret
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 
 	return token.SignedString([]byte(secret))
@@ -86,7 +98,7 @@ func CreateJWT(account *Account) (string, error) {
 
 func ValidateJWT(tokenString string) (*jwt.Token, error) {
 
-	jwtSecret := LoadConfig().JWTSecret
+	jwtSecret := config.LoadConfig().JWTSecret
 
 	return jwt.Parse(tokenString, func(t *jwt.Token) (interface{}, error) {
 		// Don't forget to validate the alg is what you expect:

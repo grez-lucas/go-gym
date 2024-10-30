@@ -6,10 +6,12 @@ COPY go.mod go.sum ./
 
 RUN go mod download
 
-COPY *.go ./
+COPY cmd/ ./cmd
 
-RUN CGO_ENABLED=0 GOOS=linux go build -o /gogym
+COPY /pkg ./pkg
+
+RUN CGO_ENABLED=0 GOOS=linux go build -o ./bin/gogym ./cmd/api
 
 EXPOSE 8000
 
-CMD ["/gogym"]
+CMD ["./bin/gogym"]

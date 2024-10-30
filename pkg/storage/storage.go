@@ -1,9 +1,12 @@
-package main
+package storage
 
 import (
 	"database/sql"
 	"fmt"
 	"log"
+
+	"github.com/grez-lucas/go-gym/pkg/config"
+	"github.com/grez-lucas/go-gym/pkg/domain"
 
 	_ "github.com/lib/pq"
 	"golang.org/x/crypto/bcrypt"
@@ -12,17 +15,17 @@ import (
 // This module is responsible for DB connections, and being DB agnostic!
 
 type Storage interface {
-	CreateGym(*Gym) (*Gym, error)
+	CreateGym(*domain.Gym) (*domain.Gym, error)
 	DeleteGym(int) error
-	UpdateGym(*Gym) error
-	GetGymByID(int) (*Gym, error)
-	GetGyms() ([]*Gym, error)
-	CreateRating(*Rating) (*Rating, error)
+	UpdateGym(*domain.Gym) error
+	GetGymByID(int) (*domain.Gym, error)
+	GetGyms() ([]*domain.Gym, error)
+	CreateRating(*domain.Rating) (*domain.Rating, error)
 	GetAverageRating(int) (float32, error)
-	CreateAccount(*Account) (*Account, error)
-	GetAccounts() ([]*Account, error)
-	GetAccountByID(int) (*Account, error)
-	GetAccountByUsername(string) (*Account, error)
+	CreateAccount(*domain.Account) (*domain.Account, error)
+	GetAccounts() ([]*domain.Account, error)
+	GetAccountByID(int) (*domain.Account, error)
+	GetAccountByUsername(string) (*domain.Account, error)
 }
 
 type PostgreSQLStore struct {
@@ -31,7 +34,7 @@ type PostgreSQLStore struct {
 
 func NewPostgreSQLStore() (*PostgreSQLStore, error) {
 
-	config := LoadConfig()
+	config := config.LoadConfig()
 
 	connStr := config.PostgreSQLConnStr()
 	db, err := sql.Open("postgres", connStr)
@@ -127,7 +130,7 @@ func (s *PostgreSQLStore) CreateAccountsTable() error {
 	return nil
 }
 
-func (s *PostgreSQLStore) CreateGym(gym *Gym) (*Gym, error) {
+func (s *PostgreSQLStore) CreateGym(gym *domain.Gym) (*domain.Gym, error) {
 	// To avoid SQL injection, avoid using your custom Sprintf format!
 	// Instead use something like this
 	query := `
@@ -167,11 +170,11 @@ func (s *PostgreSQLStore) DeleteGym(id int) error {
 	return nil
 }
 
-func (s *PostgreSQLStore) UpdateGym(*Gym) error {
+func (s *PostgreSQLStore) UpdateGym(*domain.Gym) error {
 	return nil
 }
 
-func (s *PostgreSQLStore) GetGymByID(id int) (*Gym, error) {
+func (s *PostgreSQLStore) GetGymByID(id int) (*domain.Gym, error) {
 
 	query := `
     SELECT * from gyms
@@ -192,9 +195,9 @@ func (s *PostgreSQLStore) GetGymByID(id int) (*Gym, error) {
 	return nil, fmt.Errorf("Gym with ID %d not found", id)
 }
 
-func (s *PostgreSQLStore) GetGyms() ([]*Gym, error) {
+func (s *PostgreSQLStore) GetGyms() ([]*domain.Gym, error) {
 
-	gyms := []*Gym{}
+	gyms := []*domain.Gym{}
 
 	query := `SELECT * FROM gyms`
 
@@ -228,7 +231,7 @@ func (s *PostgreSQLStore) GetGyms() ([]*Gym, error) {
 	return gyms, nil
 }
 
-func (s *PostgreSQLStore) CreateRating(r *Rating) (*Rating, error) {
+func (s *PostgreSQLStore) CreateRating(r *domain.Rating) (*domain.Rating, error) {
 	query := `
     INSERT INTO ratings (gym_id, rating, user_name, review, created_at, updated_at)
     values ($1, $2, $3, $4, $5, $6)
@@ -240,7 +243,7 @@ func (s *PostgreSQLStore) CreateRating(r *Rating) (*Rating, error) {
 	return scanIntoRating(row)
 }
 
-func (s *PostgreSQLStore) CreateAccount(a *Account) (*Account, error) {
+func (s *PostgreSQLStore) CreateAccount(a *domain.Account) (*domain.Account, error) {
 
 	query := `
     INSERT INTO accounts (username, password, created_at, updated_at)
@@ -268,7 +271,7 @@ func (s *PostgreSQLStore) CreateAccount(a *Account) (*Account, error) {
 
 }
 
-func (s *PostgreSQLStore) GetAccounts() ([]*Account, error) {
+func (s *PostgreSQLStore) GetAccounts() ([]*domain.Account, error) {
 
 	query := `SELECT * from accounts`
 
@@ -278,7 +281,7 @@ func (s *PostgreSQLStore) GetAccounts() ([]*Account, error) {
 		return nil, err
 	}
 
-	accounts := []*Account{}
+	accounts := []*domain.Account{}
 
 	for rows.Next() {
 		account, err := scanIntoAccount(rows)
@@ -293,7 +296,7 @@ func (s *PostgreSQLStore) GetAccounts() ([]*Account, error) {
 	return accounts, nil
 }
 
-func (s *PostgreSQLStore) GetAccountByUsername(username string) (*Account, error) {
+func (s *PostgreSQLStore) GetAccountByUsername(username string) (*domain.Account, error) {
 
 	query := `
   SELECT *
@@ -331,7 +334,7 @@ func (s *PostgreSQLStore) GetAverageRating(id int) (float32, error) {
 	return avgRating, nil
 }
 
-func (s *PostgreSQLStore) GetAccountByID(id int) (*Account, error) {
+func (s *PostgreSQLStore) GetAccountByID(id int) (*domain.Account, error) {
 
 	query := `
     SELECT *
@@ -353,8 +356,8 @@ func (s *PostgreSQLStore) GetAccountByID(id int) (*Account, error) {
 
 }
 
-func scanIntoGym(row *sql.Rows) (*Gym, error) {
-	gym := new(Gym)
+func scanIntoGym(row *sql.Rows) (*domain.Gym, error) {
+	gym := new(domain.Gym)
 
 	err := row.Scan(
 		&gym.ID,
@@ -372,8 +375,8 @@ func scanIntoGym(row *sql.Rows) (*Gym, error) {
 	return gym, nil
 }
 
-func scanIntoRating(row *sql.Row) (*Rating, error) {
-	createdRating := new(Rating)
+func scanIntoRating(row *sql.Row) (*domain.Rating, error) {
+	createdRating := new(domain.Rating)
 
 	err := row.Scan(
 		&createdRating.ID,
@@ -394,8 +397,8 @@ func scanIntoRating(row *sql.Row) (*Rating, error) {
 
 }
 
-func scanIntoAccount(rows *sql.Rows) (*Account, error) {
-	createdAccount := new(Account)
+func scanIntoAccount(rows *sql.Rows) (*domain.Account, error) {
+	createdAccount := new(domain.Account)
 
 	err := rows.Scan(
 		&createdAccount.ID,
